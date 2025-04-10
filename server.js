@@ -8,8 +8,20 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 루트 경로 추가
+app.get('/', (req, res) => {
+    res.json({
+        status: 'success',
+        message: 'KMU Timetable API Server is running',
+        secure: req.secure,
+        protocol: req.protocol,
+        host: req.get('host')
+    });
+});
+
 // 라우터 설정
 app.use('/api', require('./routes/timetableRoutes'));
+app.use('/api', require('./routes/subjectAlternativeRoutes'));
 
 // 서버 시작
 const PORT = process.env.PORT || 5000;
