@@ -10,7 +10,7 @@ app.use(helmet());
 
 // CORS 설정 업데이트
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://kmutimetable.vercel.app/'],  // 프론트엔드 도메인 추가 필요
+    origin: ['http://localhost:3000', 'https://kmutimetable.vercel.app'],  // 프론트엔드 도메인 추가 필요
     credentials: true
 }));
 

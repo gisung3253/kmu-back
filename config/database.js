@@ -12,4 +12,17 @@ const pool = mysql.createPool({
     } : false
 });
 
+// 데이터베이스 연결 테스트
+const testConnection = async () => {
+    try {
+        const connection = await pool.getConnection();
+        console.log('Database connection successful');
+        connection.release();
+    } catch (error) {
+        console.error('Database connection failed:', error);
+    }
+};
+
+testConnection();
+
 module.exports = pool;

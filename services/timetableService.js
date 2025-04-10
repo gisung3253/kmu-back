@@ -42,14 +42,18 @@ class TimetableService {
             liberalAreas 
         } = params;
 
-        // 원격강의 선호 여부 확인
-        const preferOnline = liberalAreas.includes("원격 강의 희망");
-        // 실제 교양 영역만 필터링
-        const actualLiberalAreas = liberalAreas.filter(area => area !== "원격강의");
+        // 교양 과목은 liberalCredits가 0보다 큰 경우에만 조회
+        let liberalSubjects = [];
+        let actualLiberalAreas = [];
 
-        // 전공/교양 과목 조회
+        if (liberalCredits > 0) {
+            const preferOnline = liberalAreas.includes("원격 강의 희망");
+            actualLiberalAreas = liberalAreas.filter(area => area !== "원격강의");
+            liberalSubjects = await this.getLiberalSubjects(actualLiberalAreas);
+        }
+
+        // 전공 과목 조회
         const majorSubjects = await this.getMajorSubjects(department, grade, semester);
-        const liberalSubjects = await this.getLiberalSubjects(actualLiberalAreas);
 
         const result = {
             offline: { major: [], liberal: [] },
@@ -97,111 +101,79 @@ class TimetableService {
             }
         }
 
-        // 교양 과목 선택 로직 수정
-        let liberalAttempts = 0;
-        let remainingLiberalCredits = liberalCredits;
+        // 교양 과목 선택을 위한 Set 추가
         const selectedLiberalNames = new Set();
-        const areaCount = new Map();
 
-        // 1단계: 원격 강의 우선 선택 (원격강의 선호가 있는 경우)
-        if (preferOnline) {
-            let onlineCount = 0;  // 원격 강의 수 추적
-            
-            for (const area of actualLiberalAreas) {
-                if (remainingLiberalCredits <= 0) break;
-                if (onlineCount >= 2) break;  // 원격 강의가 2개 이상이면 중단
+        // 교양 과목 선택 로직 (liberalCredits > 0 인 경우에만 실행)
+        let areaCount = new Map();
+        let remainingLiberalCredits = liberalCredits;
 
-                const onlineSubjects = liberalSubjects
-                    .filter(s => s.area === area)
-                    .filter(s => !selectedLiberalNames.has(s.name))
-                    .filter(s => {
-                        const timeJson = typeof s.time_json === 'string' 
-                            ? JSON.parse(s.time_json) 
-                            : s.time_json;
-                        return timeJson[0].day === '원격';
-                    });
+        if (liberalCredits > 0) {
+            // 기존 교양 과목 선택 로직
+            const preferOnline = liberalAreas.includes("원격 강의 희망");
 
-                for (const subject of onlineSubjects) {
-                    if (remainingLiberalCredits < subject.credit) continue;
+            // 1단계: 원격 강의 우선 선택 (원격강의 선호가 있는 경우)
+            if (preferOnline) {
+                let onlineCount = 0;  // 원격 강의 수 추적
+                
+                for (const area of actualLiberalAreas) {
+                    if (remainingLiberalCredits <= 0) break;
                     if (onlineCount >= 2) break;  // 원격 강의가 2개 이상이면 중단
 
-                    result.online.liberal.push(subject);
-                    remainingLiberalCredits -= subject.credit;
-                    selectedLiberalNames.add(subject.name);
-                    areaCount.set(area, (areaCount.get(area) || 0) + 1);
-                    onlineCount++;
-                    break;
+                    const onlineSubjects = liberalSubjects
+                        .filter(s => s.area === area)
+                        .filter(s => !selectedLiberalNames.has(s.name))
+                        .filter(s => {
+                            const timeJson = typeof s.time_json === 'string' 
+                                ? JSON.parse(s.time_json) 
+                                : s.time_json;
+                            return timeJson[0].day === '원격';
+                        });
+
+                    for (const subject of onlineSubjects) {
+                        if (remainingLiberalCredits < subject.credit) continue;
+                        if (onlineCount >= 2) break;  // 원격 강의가 2개 이상이면 중단
+
+                        result.online.liberal.push(subject);
+                        remainingLiberalCredits -= subject.credit;
+                        selectedLiberalNames.add(subject.name);
+                        areaCount.set(area, (areaCount.get(area) || 0) + 1);
+                        onlineCount++;
+                        break;
+                    }
                 }
             }
-        }
 
-        const getOnlineCount = (subjects) => {
-            return subjects.filter(subject => {
+            const getOnlineCount = (subjects) => {
+                return subjects.filter(subject => {
+                    const timeJson = typeof subject.time_json === 'string' 
+                        ? JSON.parse(subject.time_json) 
+                        : subject.time_json;
+                    return timeJson[0].day === '원격';
+                }).length;
+            };
+
+            const canAddOnlineSubject = (subject) => {
                 const timeJson = typeof subject.time_json === 'string' 
                     ? JSON.parse(subject.time_json) 
                     : subject.time_json;
-                return timeJson[0].day === '원격';
-            }).length;
-        };
-
-        const canAddOnlineSubject = (subject) => {
-            const timeJson = typeof subject.time_json === 'string' 
-                ? JSON.parse(subject.time_json) 
-                : subject.time_json;
-            const isOnline = timeJson[0].day === '원격';
-            
-            if (isOnline) {
-                const currentOnlineCount = getOnlineCount([
-                    ...result.online.major, 
-                    ...result.online.liberal
-                ]);
-                return currentOnlineCount < 2;
-            }
-            return true;
-        };
-
-        // 2단계: 나머지 과목 선택
-        for (const area of actualLiberalAreas) {
-            if (remainingLiberalCredits <= 0) break;
-            if (areaCount.get(area)) continue; // 이미 해당 영역의 원격 강의가 선택된 경우 스킵
-
-            const areaSubjects = liberalSubjects
-                .filter(s => s.area === area)
-                .filter(s => !selectedLiberalNames.has(s.name));
-
-            for (const subject of areaSubjects) {
-                if (remainingLiberalCredits < subject.credit) continue;
-
-                const timeJson = typeof subject.time_json === 'string' 
-                    ? JSON.parse(subject.time_json) 
-                    : subject.time_json;
-                    
                 const isOnline = timeJson[0].day === '원격';
-                const targetArray = isOnline ? result.online.liberal : result.offline.liberal;
-
-                if (canAddSubject(subject, [...result.offline.major, ...result.offline.liberal]) && canAddOnlineSubject(subject)) {
-                    targetArray.push(subject);
-                    remainingLiberalCredits -= subject.credit;
-                    selectedLiberalNames.add(subject.name);
-                    areaCount.set(area, (areaCount.get(area) || 0) + 1);
-                    break;
+                
+                if (isOnline) {
+                    const currentOnlineCount = getOnlineCount([
+                        ...result.online.major, 
+                        ...result.online.liberal
+                    ]);
+                    return currentOnlineCount < 2;
                 }
-            }
-        }
+                return true;
+            };
 
-        // 3단계: 남은 학점 채우기
-        while (remainingLiberalCredits > 0 && liberalAttempts < MAX_ATTEMPTS) {
-            let added = false;
+            // 2단계: 나머지 과목 선택
+            for (const area of actualLiberalAreas) {
+                if (remainingLiberalCredits <= 0) break;
+                if (areaCount.get(area)) continue; // 이미 해당 영역의 원격 강의가 선택된 경우 스킵
 
-            // 영역별 현재 과목 수 확인
-            const currentCounts = new Map(areaCount);
-            
-            // 가장 적은 과목이 선택된 영역부터 선택
-            const sortedAreas = [...actualLiberalAreas].sort((a, b) => 
-                (currentCounts.get(a) || 0) - (currentCounts.get(b) || 0)
-            );
-
-            for (const area of sortedAreas) {
                 const areaSubjects = liberalSubjects
                     .filter(s => s.area === area)
                     .filter(s => !selectedLiberalNames.has(s.name));
@@ -221,25 +193,61 @@ class TimetableService {
                         remainingLiberalCredits -= subject.credit;
                         selectedLiberalNames.add(subject.name);
                         areaCount.set(area, (areaCount.get(area) || 0) + 1);
-                        added = true;
                         break;
                     }
                 }
-
-                if (added) break;
             }
 
-            if (!added) {
-                liberalAttempts++;
-                if (liberalAttempts >= MAX_ATTEMPTS) {
-                    console.log('교양 과목 시간표 생성 실패: 시간이 겹치지 않는 조합을 찾을 수 없습니다.');
-                    break;
+            // 3단계: 남은 학점 채우기
+            let liberalAttempts = 0;
+            while (remainingLiberalCredits > 0 && liberalAttempts < MAX_ATTEMPTS) {
+                let added = false;
+
+                // 영역별 현재 과목 수 확인
+                const currentCounts = new Map(areaCount);
+                
+                // 가장 적은 과목이 선택된 영역부터 선택
+                const sortedAreas = [...actualLiberalAreas].sort((a, b) => 
+                    (currentCounts.get(a) || 0) - (currentCounts.get(b) || 0)
+                );
+
+                for (const area of sortedAreas) {
+                    const areaSubjects = liberalSubjects
+                        .filter(s => s.area === area)
+                        .filter(s => !selectedLiberalNames.has(s.name));
+
+                    for (const subject of areaSubjects) {
+                        if (remainingLiberalCredits < subject.credit) continue;
+
+                        const timeJson = typeof subject.time_json === 'string' 
+                            ? JSON.parse(subject.time_json) 
+                            : subject.time_json;
+                            
+                        const isOnline = timeJson[0].day === '원격';
+                        const targetArray = isOnline ? result.online.liberal : result.offline.liberal;
+
+                        if (canAddSubject(subject, [...result.offline.major, ...result.offline.liberal]) && canAddOnlineSubject(subject)) {
+                            targetArray.push(subject);
+                            remainingLiberalCredits -= subject.credit;
+                            selectedLiberalNames.add(subject.name);
+                            areaCount.set(area, (areaCount.get(area) || 0) + 1);
+                            added = true;
+                            break;
+                        }
+                    }
+
+                    if (added) break;
+                }
+
+                if (!added) {
+                    liberalAttempts++;
+                    if (liberalAttempts >= MAX_ATTEMPTS) {
+                        console.log('교양 과목 시간표 생성 실패: 시간이 겹치지 않는 조합을 찾을 수 없습니다.');
+                        break;
+                    }
                 }
             }
         }
-
-        // 각 영역별로 최소 1개 이상 선택되었는지 확인
-        const allAreasHaveSubjects = actualLiberalAreas.every(area => areaCount.get(area) > 0);
 
         // 최종 결과에 메타데이터 추가
         return {
@@ -248,9 +256,10 @@ class TimetableService {
                 requestedMajorCredits: majorCredits,
                 actualMajorCredits: majorCredits - remainingMajorCredits,
                 requestedLiberalCredits: liberalCredits,
-                actualLiberalCredits: liberalCredits - remainingLiberalCredits,
-                success: remainingMajorCredits === 0 && remainingLiberalCredits === 0 && allAreasHaveSubjects,
-                areaDistribution: Object.fromEntries(areaCount)
+                actualLiberalCredits: liberalCredits > 0 ? liberalCredits - remainingLiberalCredits : 0,
+                success: remainingMajorCredits === 0 && 
+                        (liberalCredits === 0 || (remainingLiberalCredits === 0 && actualLiberalAreas.every(area => areaCount.get(area) > 0))),
+                areaDistribution: liberalCredits > 0 ? Object.fromEntries(areaCount) : {}
             }
         };
     }
