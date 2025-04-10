@@ -43,7 +43,7 @@ class TimetableService {
         } = params;
 
         // 원격강의 선호 여부 확인
-        const preferOnline = liberalAreas.includes("원격강의");
+        const preferOnline = liberalAreas.includes("원격 강의 희망");
         // 실제 교양 영역만 필터링
         const actualLiberalAreas = liberalAreas.filter(area => area !== "원격강의");
 
