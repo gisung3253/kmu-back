@@ -29,23 +29,42 @@ class SubjectAlternativeService {
 
             // 대체 가능한 과목 조회
             const tableName = currentSubject.type === 'major' ? 'major' : 'liberal';
-            const [alternatives] = await pool.query(
-                `SELECT * FROM ${tableName}
-                WHERE name = ? 
-                AND semester = ? 
-                AND code != ?
-                AND JSON_EXTRACT(time_json, '$[0].day') = ?
-                AND JSON_EXTRACT(time_json, '$[0].start') = ?
-                AND JSON_EXTRACT(time_json, '$[0].end') = ?`,
-                [
+            let query;
+            let params;
+
+            if (tableName === 'major') {
+                query = `SELECT * FROM major
+                    WHERE name = ? 
+                    AND semester = ? 
+                    AND code != ?
+                    AND JSON_EXTRACT(time_json, '$[0].day') = ?
+                    AND JSON_EXTRACT(time_json, '$[0].start') = ?
+                    AND JSON_EXTRACT(time_json, '$[0].end') = ?`;
+                params = [
                     currentSubject.name,
                     currentSubject.semester,
                     code,
                     currentTime.day,
                     currentTime.start,
                     currentTime.end
-                ]
-            );
+                ];
+            } else {
+                query = `SELECT * FROM liberal
+                    WHERE name = ? 
+                    AND code != ?
+                    AND JSON_EXTRACT(time_json, '$[0].day') = ?
+                    AND JSON_EXTRACT(time_json, '$[0].start') = ?
+                    AND JSON_EXTRACT(time_json, '$[0].end') = ?`;
+                params = [
+                    currentSubject.name,
+                    code,
+                    currentTime.day,
+                    currentTime.start,
+                    currentTime.end
+                ];
+            }
+
+            const [alternatives] = await pool.query(query, params);
 
             return {
                 current: currentSubject,
@@ -142,28 +161,32 @@ class SubjectAlternativeService {
     }
 
     async findValidAlternative(subject, excludedCodes, currentTimetable) {
-        // 같은 타입(전공/교양)의 과목 중에서 시간이 겹치지 않는 대체 과목 찾기
         const tableName = subject.type === 'major' ? 'major' : 'liberal';
-        const [alternatives] = await pool.query(
-            `SELECT * FROM ${tableName}
-            WHERE semester = ?
-            AND credit = ?
-            AND code NOT IN (?)
-            AND code != ?`,
-            [subject.semester, subject.credit, excludedCodes, subject.code]
-        );
+        let query;
+        let params;
 
-        // 랜덤으로 섞기
-        const shuffled = this.shuffleArray(alternatives);
-
-        // 시간이 겹치지 않는 첫 번째 과목 찾기
-        for (const alt of shuffled) {
-            if (this.isValidReplacement(alt, currentTimetable)) {
-                return alt;
-            }
+        if (tableName === 'major') {
+            query = `
+                SELECT * FROM major
+                WHERE semester = ?
+                AND credit = ?
+                AND code NOT IN (?)
+                AND code != ?
+            `;
+            params = [subject.semester, subject.credit, excludedCodes, subject.code];
+        } else {
+            query = `
+                SELECT * FROM liberal
+                WHERE credit = ?
+                AND area = ?
+                AND code NOT IN (?)
+                AND code != ?
+            `;
+            params = [subject.credit, subject.area, excludedCodes, subject.code];
         }
 
-        return null;
+        const [alternatives] = await pool.query(query, params);
+        return alternatives;
     }
 
     hasTimeConflict(subject1, subjects) {
