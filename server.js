@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const helmet = require('helmet');  // 추가
+const helmet = require('helmet');
 require('dotenv').config();
 
 const app = express();
@@ -8,9 +8,9 @@ const app = express();
 // 보안 헤더 설정
 app.use(helmet());
 
-// CORS 설정 업데이트
+// CORS 설정 - 모든 도메인 허용
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://kmutimetable.vercel.app'],  // 프론트엔드 도메인 추가 필요
+    origin: '*',
     credentials: true
 }));
 
