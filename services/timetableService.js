@@ -250,17 +250,25 @@ class TimetableService {
         }
 
         // 최종 결과에 메타데이터 추가
+        const actualMajorCredits = majorCredits - remainingMajorCredits;
+        const actualLiberalCredits = liberalCredits > 0 ? liberalCredits - remainingLiberalCredits : 0;
+        const success = (
+            actualMajorCredits === majorCredits &&
+            actualLiberalCredits === liberalCredits
+        );
+
+        const meta = {
+            requestedMajorCredits: majorCredits,
+            actualMajorCredits,
+            requestedLiberalCredits: liberalCredits,
+            actualLiberalCredits,
+            success,
+            areaDistribution: liberalCredits > 0 ? Object.fromEntries(areaCount) : {}
+        };
+
         return {
             ...result,
-            meta: {
-                requestedMajorCredits: majorCredits,
-                actualMajorCredits: majorCredits - remainingMajorCredits,
-                requestedLiberalCredits: liberalCredits,
-                actualLiberalCredits: liberalCredits > 0 ? liberalCredits - remainingLiberalCredits : 0,
-                success: remainingMajorCredits === 0 && 
-                        (liberalCredits === 0 || (remainingLiberalCredits === 0 && actualLiberalAreas.every(area => areaCount.get(area) > 0))),
-                areaDistribution: liberalCredits > 0 ? Object.fromEntries(areaCount) : {}
-            }
+            meta
         };
     }
 }
