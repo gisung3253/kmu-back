@@ -151,4 +151,9 @@
 - **Routes**: API 엔드포인트 정의
 - **Database Connection**: MySQL 데이터베이스 연결 관리
 
-https://capstone-ochre-five.vercel.app/
+## 배포 정보
+
+이 프로젝트는 **Amazon EC2** 인스턴스를 통해 배포되었습니다. 서버는 24시간 안정적인 서비스를 제공하며, PM2를 사용하여 프로세스 관리 및 모니터링을 수행합니다.
+
+## 서비스 링크
+[https://capstone-ochre-five.vercel.app/](https://capstone-ochre-five.vercel.app/)
