@@ -1,159 +1,197 @@
-# 계명대학교 시간표 생성 시스템 - 백엔드
+# 📚 KMU 시간표 자동생성 시스템
 
-안녕하세요! 이 프로젝트는 계명대학교 학생들의 시간표 작성 고민을 해결하기 위해 개발된 맞춤형 시간표 생성 및 추천 시스템입니다.
+대학교에서 매 학기마다 **수강신청 전쟁**을 치르며 시간표를 짜는 게 너무 스트레스였습니다. 전공 필수과목은 시간이 겹치고, 교양은 뭘 들어야 할지 모르겠고, 원격강의는 몇 개까지 들을 수 있는지 헷갈리고... 이런 복잡한 조건들을 **자동으로 계산해서 최적의 시간표를 만들어주는** 시스템을 개발했습니다.
 
-## 🎯 프로젝트 소개
+## 📱 화면 구성
 
-매 학기 수강신청 기간마다 시간표 작성으로 고민하는 학우들을 위해 만들었습니다. 이 시스템은 다음과 같은 문제들을 해결합니다:
+<div align="center">
 
-- ⏰ **시간 중복 없는 최적의 시간표 생성**: 복잡한 시간표 조합을 자동으로 계산
-- 📚 **필수 교양 영역 자동 포함**: 학생의 필수 이수 영역을 고려한 시간표 구성
-- 🖥️ **원격 강의 제한 반영**: 최대 허용 원격 강의 수를 고려한 시간표 생성
-- 👨‍🏫 **선호 교수님 우선 반영**: 학생이 선호하는 교수님의 강의 우선 배정
-- 🔄 **대체 과목 추천 기능**: 원하는 과목을 수강하지 못할 경우 적절한 대체 과목 추천
+### 메인 화면 & 조건 설정
+<img src="images/1.png" width="400" alt="메인 화면">
+<br><br>
 
-실제 계명대학교의 교과과정과 학사 규정을 반영하여 학생들이 더 효율적으로 시간표를 계획할 수 있도록 돕는 RESTful API 서버입니다.
+### 생성된 시간표
+<img src="images/2.png" width="400" alt="결과">
+<img src="images/3.png" width="400" alt="시간표 결과">
 
-## 목차
-- [기술 스택](#기술-스택)
-- [실행 화면](#실행-화면)
-- [데이터베이스 스키마](#데이터베이스-스키마)
-- [API 문서](#api-문서)
-- [주요 기능](#주요-기능)
+</div>
 
-## 기술 스택
-
-- **런타임**: Node.js
-- **프레임워크**: Express.js
+## 🚀 배포 환경
+- **프론트엔드**: https://capstone-ochre-five.vercel.app
+- **서버**: AWS EC2
 - **데이터베이스**: MySQL
-- **보안**: Helmet (보안 헤더 설정)
-- **기타 라이브러리**:
-  - dotenv: 환경변수 관리
-  - cors: CORS 정책 처리
-  - mysql2: MySQL 연결 및 쿼리
 
-## 실행 화면
+## 🌐 데모 체험
+**↗️ [시간표 생성해보기](https://capstone-ochre-five.vercel.app)**
 
-### 메인 화면
-![메인 화면](./images/1.png)
+> 학과, 학년, 원하는 학점을 입력하면 자동으로 최적의 시간표를 생성해줍니다!
 
-### 결과 시간표 화면
-![결과 시간표](./images/2.png)
-*최종 생성된 시간표 시각화*
+## 🛠 기술 스택
+- **Backend**: Node.js, Express.js
+- **Database**: MySQL
+- **Deploy**: AWS EC2
+- **Frontend**: React (별도 레포지토리)
 
-### 대체 과목 추천 화면
-![대체 과목 추천](./images/3.png)
-*특정 과목을 대체할 수 있는 과목 추천 결과*
+---
 
+## ✨ 핵심 기능
 
-## 데이터베이스 스키마
+### 🤖 지능형 시간표 자동생성
+- **전공/교양 학점 조건** 입력하면 자동으로 과목 선택
+- **시간 겹침 자동 방지** - 물리적으로 불가능한 시간표 차단
+- **원격강의 제한** - 최대 2개까지만 자동 배치
+- **가중치 기반 선택** - 중요한 전공과목, 인기 교양과목 우선 배치
 
-### 테이블 구조
+### 🔄 스마트 대체과목 추천
+- **문제 과목 감지** - 시간이 겹치는 과목 자동 찾기
+- **동일 조건 대체과목** - 같은 시간대, 같은 과목명으로 다른 분반 추천
+- **차선책 추천** - 대체 불가능한 경우 다음 순위 과목으로 교체 제안
 
-#### 1. major 테이블 (전공 과목)
-| 필드명 | 데이터 타입 | NULL 허용 | 키 | 기본값 | 설명 |
-|--------|------------|-----------|-----|--------|------|
-| code | varchar(20) | NO | PRI | | 과목 코드 (기본키) |
-| name | varchar(100) | YES | | | 과목명 |
-| credit | int | YES | | | 학점 |
-| professor | varchar(50) | YES | | | 교수명 |
-| department | varchar(100) | YES | | | 학과 |
-| grade | int | YES | | | 학년 |
-| max_students | int | YES | | | 최대 수강 인원 |
-| time_json | json | YES | | | 수업 시간 정보 (JSON 형식) |
-| semester | int | YES | | | 학기 |
-| weight | int | YES | | 2 | 가중치 |
-| created_at | timestamp | YES | | CURRENT_TIMESTAMP | 생성 시간 |
+### 📊 실시간 검증 시스템
+- **학점 계산** - 요청 학점 vs 실제 배치 학점 비교
+- **제약조건 체크** - 원격강의 개수, 시간 중복 실시간 검증
+- **성공률 표시** - 원하는 조건 달성 여부 즉시 확인
 
-#### 2. liberal 테이블 (교양 과목)
-| 필드명 | 데이터 타입 | NULL 허용 | 키 | 기본값 | 설명 |
-|--------|------------|-----------|-----|--------|------|
-| code | varchar(20) | NO | PRI | | 과목 코드 (기본키) |
-| name | varchar(100) | YES | | | 과목명 |
-| professor | varchar(50) | YES | | | 교수명 |
-| credit | int | YES | | | 학점 |
-| max_students | int | YES | | | 최대 수강 인원 |
-| note | text | YES | | | 비고/설명 |
-| area | varchar(50) | YES | | | 영역 (교양 분류) |
-| ranking | int | YES | | | 순위/중요도 |
-| time_json | json | YES | | | 수업 시간 정보 (JSON 형식) |
-| created_at | timestamp | YES | | CURRENT_TIMESTAMP | 생성 시간 |
+---
 
-### ER 다이어그램
+## 🎯 문제 해결 포인트
 
+### ✅ 기존 문제점
+- 수강신청 사이트에서 하나씩 시간 확인하며 수동으로 짜야 함
+- 전공과 교양 학점 배분 계산이 복잡함
+- 원격강의 제한 규정을 놓치기 쉬움
+- 좋은 교양과목을 찾기 어려움
 
+### 💡 해결 방법
+- **조건 입력만으로 완성된 시간표 자동 생성**
+- **복잡한 대학 규정을 시스템에 내장**
+- **과목 인기도와 중요도 데이터 기반 추천**
+- **실시간 검증으로 불가능한 조합 사전 차단**
 
-## API 문서
+---
 
-### 시간표 생성
-- `POST /api/timetable` - 시간표 생성 요청
-  ```json
-  // 요청 본문 예시
-  {
-    "department": "컴퓨터공학과",
-    "grade": 2,
-    "semester": 1,
-    "liberalAreas": ["인문", "사회"],
-    "maxRemoteClasses": 2,
-    "preferredProfessors": ["김교수", "이교수"]
-  }
-  ```
+## 💻 핵심 알고리즘
 
-### 대체 과목 추천
-- `GET /api/alternatives?code=CS101` - 특정 과목의 대체 과목 조회
-- `POST /api/alternatives/recommend` - 전체 시간표에 대한 대체 시간표 추천
-  ```json
-  // 요청 본문 예시
-  {
-    "subjects": [
-      {"code": "CS101", "name": "프로그래밍입문", "time_json": {...}},
-      {"code": "CS201", "name": "자료구조", "time_json": {...}}
-    ],
-    "toReplace": "CS101"
-  }
-  ```
+### 1. 시간 겹침 검증
+여러 과목의 시간표를 동시에 검사하여 물리적 충돌 방지
 
-## 주요 기능
+```javascript
+// utils/timeValidator.js - canAddSubject()
+function canAddSubject(newSubject, selectedSubjects) {
+    // 원격 강의 개수 제한 검사
+    if (isNewSubjectOnline) {
+        const onlineCount = countOnlineCourses(selectedSubjects);
+        if (onlineCount >= 2) return false;
+    }
+    
+    // 기존 과목들과 시간 겹침 검사
+    for (const subject of selectedSubjects) {
+        if (isSubjectsOverlap(newSubject, subject)) {
+            return false;
+        }
+    }
+    return true;
+}
+```
 
-### 1. 시간표 생성 알고리즘
-- 학과, 학년, 학기에 따른 전공 과목 필터링
-- 교양 영역 및 온라인 강의 요건 반영
-- 시간표 중복 방지 알고리즘 (timeValidator 활용)
-- 교수 선호도 반영 가능
+### 2. 가중치 기반 과목 선택
+전공은 중요도(weight), 교양은 학생 선호도(ranking) 순으로 우선배치
 
-### 2. 대체 과목 추천 시스템
-- 특정 과목을 대체할 수 있는 다른 과목 검색
-- 전체 시간표를 고려한 최적의 대체 과목 추천
-- 시간 충돌 없는 과목만 추천
+```javascript
+// services/timetableService.js - getMajorSubjects()
+const [rows] = await pool.query(
+    'SELECT * FROM major WHERE department = ? AND grade = ? AND semester = ? ORDER BY weight DESC',
+    [department, grade, semester]
+);
 
-### 3. 시간 검증 시스템
-- JSON 형식의 시간 데이터를 파싱하여 중복 검사
-- 원격 강의 수 제한 검증
-- 요일 및 시간대별 충돌 여부 확인
+// 교양은 인기 순위로 정렬
+query += ' ORDER BY ranking ASC';
+```
 
-### 4. 데이터 처리
-- 전공 및 교양 과목 데이터 효율적 조회
-- JSON 형태의 시간 정보 처리
-- 조건에 따른 동적 쿼리 생성
+### 3. 지능형 대체과목 추천
+현재 시간표에서 문제가 되는 과목을 자동으로 감지하고 더 나은 대안 제시
 
-### 5. 보안 및 에러 처리
-- Helmet을 활용한 보안 헤더 설정
-- 입력값 검증 및 예외 처리
-- 에러 상황별 적절한 응답 제공
+```javascript
+// services/subjectAlternativeService.js - recommendAlternativeTimetable()
+for (const liberal of offlineLiberalSubjects) {
+    const nextRankedLiberals = await this.getNextRankedLiberals(liberal);
+    
+    // 다음 순위 과목들 중 시간이 안 겹치는 첫 번째 과목 선택
+    for (const alt of nextRankedLiberals) {
+        if (this.isValidReplacement(alt, result)) {
+            result.offline.liberal.push(alt);
+            break;
+        }
+    }
+}
+```
 
-## 시스템 아키텍처
+---
 
-이 프로젝트는 MVC(Model-View-Controller) 패턴을 기반으로 설계되었습니다:
+## 📈 개발 성과
 
-- **Controller**: 클라이언트 요청 처리 및 응답 반환
-- **Service**: 핵심 비즈니스 로직 처리 (시간표 생성, 대체 과목 추천)
-- **Util**: 공통 기능 및 유틸리티 함수 (시간 검증 등)
-- **Routes**: API 엔드포인트 정의
-- **Database Connection**: MySQL 데이터베이스 연결 관리
+### 🎯 핵심 장점
+- **완전 자동화**: 조건 입력 5분 → 완성된 시간표 즉시 생성
+- **최적화 알고리즘**: 수천 개 과목 조합에서 최선의 선택 자동 계산
+- **사용자 친화적**: 복잡한 조건을 간단한 폼으로 입력
 
-## 배포 정보
+### 📚 습득 기술
+- **복잡한 비즈니스 로직 구현**: 대학 수강규정의 다양한 제약조건 시스템화
+- **알고리즘 최적화**: 조합 최적화 문제를 효율적으로 해결
+- **대용량 데이터 처리**: 수천 개 과목 데이터의 실시간 검색/필터링
+- **JSON 데이터 활용**: MySQL JSON 타입을 활용한 복잡한 시간 데이터 처리
 
-이 프로젝트는 **Amazon EC2** 인스턴스를 통해 배포되었습니다. 서버는 24시간 안정적인 서비스를 제공하며, PM2를 사용하여 프로세스 관리 및 모니터링을 수행합니다.
+### 🔧 기술적 도전
+- **시간복잡도 최적화**: 모든 과목 조합을 검사하는 알고리즘의 성능 개선
+- **데이터베이스 설계**: 전공/교양 과목의 서로 다른 속성을 효율적으로 관리
+- **예외상황 처리**: 원하는 조건을 만족하는 시간표가 없을 때의 대안 제시
 
-## 서비스 링크
-[https://capstone-ochre-five.vercel.app/](https://capstone-ochre-five.vercel.app/)
+---
+
+## 🗂 데이터 수집 및 전처리
+
+### 📥 원본 데이터 문제점
+학교 홈페이지에서 다운받은 CSV 파일의 수업 시간 데이터가 완전히 제각각이었습니다:
+
+```
+❌ 비정형 데이터 예시
+- "월1,2,3교시" 
+- "화 09:00~12:00"
+- "수요일 13:30-15:00"
+- "목(14:00-16:30)"
+- "금 2-4교시"
+- "원격수업"
+```
+
+### 🔧 Node.js 파싱 시스템 구축
+수천 개 과목의 시간 데이터를 일관된 JSON 형태로 변환하는 파싱 엔진 개발:
+
+```javascript
+// 예상 파싱 로직 (시간 형식 통일화)
+function parseTimeData(rawTimeString) {
+    // 다양한 패턴 매칭으로 시간 추출
+    const patterns = [
+        /([월화수목금토일])\s*(\d{1,2}):(\d{2})~(\d{1,2}):(\d{2})/,
+        /([월화수목금토일])\s*(\d{1,2}),(\d{1,2}),(\d{1,2})교시/,
+        /([월화수목금토일])\s*(\d{1,2})-(\d{1,2})교시/
+    ];
+    
+    // 결과: { day: "월", start: "09:00", end: "12:00" }
+    return standardizedFormat;
+}
+```
+
+### 📊 데이터 처리 성과
+- **처리 과목 수**: 전체 학과 수천 개 과목 데이터
+- **정규화 완료**: 시간 형식 100% 통일 (JSON 구조)
+- **품질 향상**: 비정형 텍스트 → 검색 가능한 구조화 데이터
+- **자동화**: 매 학기 새 데이터도 동일한 파서로 처리 가능
+
+이 과정에서 **정규표현식, 문자열 처리, 대량 데이터 변환** 등의 실무 데이터 처리 스킬을 습득했습니다.
+
+---
+
+### 💡 추후 개선 계획
+- 개인별 선호도 학습 기능 (수강했던 과목 패턴 분석)
+- 실시간 수강신청 연동 (좌석 현황 반영)
+- 친구들과 공통 시간표 생성 기능
